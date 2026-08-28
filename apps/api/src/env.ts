@@ -16,6 +16,7 @@ const envSchema = z.object({
   CHANNEL_MAIN_ID: z.string().optional(),
   CHANNEL_STOCK_ID: z.string().optional(),
   PAYMENT_CARD_INFO: z.string().default("Свяжитесь с @vtgceo для оплаты"),
+  API_PUBLIC_URL: z.string().url().optional(),
   PORT: z.coerce.number().default(3001),
 });
 

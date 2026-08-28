@@ -2,12 +2,17 @@ import { Hono } from "hono";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { isAdmin } from "../env.js";
+import { env, isAdmin } from "../env.js";
 import { parseInitDataUser } from "../telegram/validate.js";
 
 export const uploadRoutes = new Hono();
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+
+function uploadBaseUrl(c: { req: { url: string } }): string {
+  if (env.API_PUBLIC_URL) return env.API_PUBLIC_URL.replace(/\/$/, "");
+  return new URL(c.req.url).origin;
+}
 
 uploadRoutes.post("/", async (c) => {
   const initData = c.req.header("X-Telegram-Init-Data") ?? "";
@@ -26,6 +31,6 @@ uploadRoutes.post("/", async (c) => {
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(UPLOAD_DIR, filename), buffer);
 
-  const base = c.req.url.replace(/\/api\/upload.*$/, "");
+  const base = uploadBaseUrl(c);
   return c.json({ url: `${base}/uploads/${filename}` });
 });

@@ -81,6 +81,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ count }),
     }),
+  adminPoolBarcodes: () =>
+    request<{ items: { code: string; status: string }[] }>("/admin/barcodes?status=POOL&limit=500"),
   adminCreateProduct: (data: Record<string, unknown>) =>
     request<{ product: ProductItem; code: string }>("/admin/products", {
       method: "POST",

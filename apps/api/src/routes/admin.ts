@@ -109,11 +109,12 @@ export function adminRoutes(bot: Bot) {
     if (auth.error) return c.json({ error: auth.error }, 403);
 
     const status = c.req.query("status");
+    const limit = Math.min(parseInt(c.req.query("limit") ?? "200", 10), 500);
     const barcodes = await prisma.barcode.findMany({
       where: status ? { status: status as BarcodeStatus } : undefined,
       include: { product: { select: { id: true, title: true, status: true } } },
-      orderBy: { code: "desc" },
-      take: 200,
+      orderBy: { code: "asc" },
+      take: limit,
     });
 
     return c.json({ items: barcodes });
