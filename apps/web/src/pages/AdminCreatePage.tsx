@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import { QrScanner } from "../components/QrScanner";
 
 export function AdminCreatePage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [code, setCode] = useState(params.get("code")?.toUpperCase() || "");
+  const [codeHint, setCodeHint] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const [title, setTitle] = useState("");
   const [priceRub, setPriceRub] = useState("");
   const [size, setSize] = useState("");
@@ -16,6 +19,26 @@ export function AdminCreatePage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [publish, setPublish] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  async function onScanCode(scanned: string) {
+    setCode(scanned);
+    setShowCamera(false);
+    setCodeHint(null);
+    try {
+      const res = await api.adminScan(scanned);
+      if (res.action === "create_product") {
+        setCodeHint("✓ Бирка свободна — заполните карточку");
+      } else if (res.action === "mark_sold") {
+        setCodeHint("⚠️ На этой бирке уже есть товар. Выберите другую бирку.");
+      } else if (res.action === "already_sold") {
+        setCodeHint("⚠️ Бирка уже продана");
+      } else {
+        setCodeHint("Неизвестный код");
+      }
+    } catch {
+      setCodeHint("Не удалось проверить код");
+    }
+  }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -58,7 +81,36 @@ export function AdminCreatePage() {
       <form onSubmit={submit}>
         <div className="field">
           <label>Код бирки *</label>
-          <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="VTG-000001" required />
+          {showCamera ? (
+            <QrScanner
+              elementId="qr-reader-create"
+              onScan={onScanCode}
+              onClose={() => setShowCamera(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ marginBottom: 8 }}
+              onClick={() => setShowCamera(true)}
+            >
+              📷 Скан QR бирки
+            </button>
+          )}
+          <input
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.toUpperCase());
+              setCodeHint(null);
+            }}
+            placeholder="VTG-000001"
+            required
+          />
+          {codeHint && (
+            <p style={{ fontSize: "0.85rem", marginTop: 6, color: codeHint.startsWith("✓") ? "#8f8" : "#fa8" }}>
+              {codeHint}
+            </p>
+          )}
         </div>
         <div className="field">
           <label>Название *</label>

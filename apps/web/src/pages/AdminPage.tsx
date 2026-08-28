@@ -104,7 +104,7 @@ export function AdminPage() {
       <section style={{ marginBottom: 24 }}>
         <h3>Скан QR / код</h3>
         {showCamera ? (
-          <QrScanner onScan={handleScan} onClose={() => setShowCamera(false)} />
+          <QrScanner onScan={handleScan} onClose={() => setShowCamera(false)} elementId="qr-reader-admin" />
         ) : (
           <button type="button" className="btn-secondary" style={{ marginBottom: 8 }} onClick={() => setShowCamera(true)}>
             📷 Скан камерой

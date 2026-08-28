@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import { parseBarcodeFromText } from "../lib/parseBarcode";
 
 type Props = {
   onScan: (code: string) => void;
   onClose: () => void;
+  elementId?: string;
 };
 
-export function QrScanner({ onScan, onClose }: Props) {
+export function QrScanner({ onScan, onClose, elementId = "qr-reader" }: Props) {
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const startedRef = useRef(false);
 
   useEffect(() => {
-    const id = "qr-reader";
-    const scanner = new Html5Qrcode(id);
+    const scanner = new Html5Qrcode(elementId);
     scannerRef.current = scanner;
 
     scanner
@@ -21,11 +22,8 @@ export function QrScanner({ onScan, onClose }: Props) {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 220, height: 220 } },
         (text) => {
-          const match = text.match(/VTG-\d+/i) || text.match(/\/i\/(VTG-\d+)/i);
-          const code = match
-            ? (match[1] ?? match[0]).toUpperCase()
-            : text.trim().toUpperCase();
-          if (code.startsWith("VTG-")) {
+          const code = parseBarcodeFromText(text);
+          if (code) {
             void scanner.stop().then(() => onScan(code));
           }
         },
@@ -41,11 +39,11 @@ export function QrScanner({ onScan, onClose }: Props) {
         void scanner.stop().catch(() => {});
       }
     };
-  }, [onScan]);
+  }, [onScan, elementId]);
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div id="qr-reader" style={{ borderRadius: 12, overflow: "hidden" }} />
+      <div id={elementId} style={{ borderRadius: 12, overflow: "hidden" }} />
       {error && <p style={{ color: "#f88", fontSize: "0.85rem" }}>{error}</p>}
       <button type="button" className="btn-secondary" style={{ marginTop: 8 }} onClick={onClose}>
         Закрыть камеру
