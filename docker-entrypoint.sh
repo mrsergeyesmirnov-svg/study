@@ -3,6 +3,9 @@ set -e
 
 if [ "$RAILWAY_SERVICE_NAME" = "web" ]; then
   echo "Starting WEB (Mini App) on port ${PORT:-8080}"
+  API_URL="${VITE_API_URL:-}"
+  echo "window.__VTG_API__ = ${API_URL:+\"${API_URL}\"};" > /app/apps/web/dist/config.js
+  echo "Wrote config.js API=${API_URL:-/api (relative)}"
   exec serve /app/apps/web/dist -s -l "${PORT:-8080}"
 fi
 
