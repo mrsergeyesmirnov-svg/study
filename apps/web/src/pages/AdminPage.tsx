@@ -1,18 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
-import { initTelegram } from "../telegram";
+import { initTelegram, getTelegramUser } from "../telegram";
 
 export function AdminPage() {
   const [admin, setAdmin] = useState<boolean | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [scanCode, setScanCode] = useState("");
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const tgUser = getTelegramUser();
 
   useEffect(() => {
     initTelegram();
-    api.adminMe().then((r) => setAdmin(r.admin));
+    api.adminMe()
+      .then((r) => {
+        setAdmin(r.admin);
+        setApiError(null);
+      })
+      .catch(() => {
+        setAdmin(false);
+        setApiError("Не достучались до API. Проверьте VITE_API_URL на web-сервисе и redeploy web.");
+      });
     const codeFromUrl = searchParams.get("code");
     if (codeFromUrl) handleScan(codeFromUrl);
   }, [searchParams]);
@@ -57,7 +67,15 @@ export function AdminPage() {
     return (
       <div className="app-shell">
         <h2>Админка</h2>
-        <p>Откройте через Telegram-бота. Ваш Telegram ID должен быть в ADMIN_TELEGRAM_IDS.</p>
+        {apiError && <p style={{ color: "#f88" }}>{apiError}</p>}
+        <p>Открывайте <b>из Telegram</b> (@vtgconcept_bot → /admin или кнопка «Админка»).</p>
+        {tgUser?.id && (
+          <p>
+            Ваш Telegram ID: <b>{tgUser.id}</b>
+            <br />
+            Добавьте в Railway → study → <code>ADMIN_TELEGRAM_IDS={tgUser.id}</code> → Redeploy
+          </p>
+        )}
         <Link to="/">← В каталог</Link>
       </div>
     );

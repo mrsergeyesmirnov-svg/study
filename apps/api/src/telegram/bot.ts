@@ -7,8 +7,8 @@ export function createBot(): Bot {
   bot.command("start", async (ctx) => {
     await ctx.reply(
       "VTGSHMOT — каталог винтажа\n\n" +
-        "🛍 Открыть магазин — кнопка «Каталог» ниже\n" +
-        "📦 Админам — «Админка»",
+        "🛍 Каталог — кнопка ниже\n" +
+        "⚙️ Админка — кнопка «Админка» или команда /admin",
       {
         reply_markup: {
           inline_keyboard: [
@@ -18,6 +18,16 @@ export function createBot(): Bot {
         },
       },
     );
+  });
+
+  bot.command("admin", async (ctx) => {
+    await ctx.reply("Админка VTGSHMOT", {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "⚙️ Открыть админку", web_app: { url: `${env.WEBAPP_URL}/admin` } }],
+        ],
+      },
+    });
   });
 
   bot.command("item", async (ctx) => {
