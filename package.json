@@ -2,6 +2,9 @@
   "name": "vtgshmot",
   "private": true,
   "workspaces": ["apps/*"],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "npm run dev -w @vtgshmot/api & npm run dev -w @vtgshmot/web",
     "build": "npm run build -w @vtgshmot/api && npm run build -w @vtgshmot/web",
