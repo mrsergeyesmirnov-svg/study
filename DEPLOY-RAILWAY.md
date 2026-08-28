@@ -1,45 +1,34 @@
-# Railway — два сервиса, не путать!
+# Railway — два сервиса, ОДИН Dockerfile
 
-## study (API + бот)
+Dockerfile менять в UI **не нужно** — `railway.toml` задаёт один `Dockerfile` для обоих.
+Railway сам передаёт `RAILWAY_SERVICE_NAME` → `web` или `study`.
+
+## study (API)
 
 | Настройка | Значение |
 |-----------|----------|
-| Dockerfile Path | `Dockerfile` |
-| **Start Command** | **ПУСТО** (удали всё!) |
-| Variables | DATABASE_URL, BOT_TOKEN, … |
-
-Стартует сам через `docker-entrypoint.sh` → `@vtgshmot/api`
-
----
+| Dockerfile | `Dockerfile` (из railway.toml, не трогать) |
+| **Start Command** | **ПУСТО** |
+| Variables | DATABASE_URL, BOT_TOKEN, ADMIN_TELEGRAM_IDS, CHANNEL_MAIN_ID=@baobab6714, PUBLIC_URL, WEBAPP_URL |
 
 ## web (Mini App)
 
 | Настройка | Значение |
 |-----------|----------|
-| Dockerfile Path | **`Dockerfile.web`** |
-| **Start Command** | **ПУСТО** (удали `npm run start:railway -w @vtgshmot/api`!) |
-| Variables | только `VITE_API_URL=https://api-домен.up.railway.app` |
+| Dockerfile | тот же `Dockerfile` |
+| **Start Command** | **ПУСТО** |
+| Variables | только `VITE_API_URL=https://study-домен.up.railway.app` |
 
-**НЕ нужны:** DATABASE_URL, BOT_TOKEN, CHANNEL_*
+## После push
 
-Стартует: `serve dist` — без Prisma, без api.
+1. **Оба сервиса** → Settings → Deploy → **очисти Start Command**
+2. Deploy → Apply / Redeploy **оба**
 
----
+## Логи (успех)
 
-## Если web падает с prisma / DATABASE_URL
+- **web:** `Building WEB only` → `Starting WEB (Mini App)`
+- **study:** `Building API only` → `Starting API + Telegram bot`
 
-→ В **web** сервисе всё ещё прописан Start Command от API.  
-Settings → Deploy → **очисти Start Command** → Save → Redeploy.
+## Ошибка chmod / start command
 
-## Проверка логов web (успех)
-
-```
-serve dist -s -l ...
-```
-
-## Проверка логов study (успех)
-
-```
-Starting API + Telegram bot
-Telegram bot started
-```
+Значит в UI всё ещё прописан Start Command — **удали его полностью**.
