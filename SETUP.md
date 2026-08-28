@@ -66,13 +66,51 @@ npm run dev -w @vtgshmot/web
 
 **Бот должен быть админом** в каналах с правом публиковать посты.
 
-### 6. Прод (VPS)
+### 6. Прод (VPS или Railway)
 
-1. Домен + HTTPS (Caddy / nginx + Let's Encrypt)
-2. `npm run build`
-3. PostgreSQL вместо SQLite — смените `provider` в `schema.prisma` и `DATABASE_URL`
-4. Process manager: `pm2 start apps/api/dist/index.js`
-5. Раздавать `apps/web/dist` через nginx или тот же сервер
+**PostgreSQL** уже в `schema.prisma`. Локально — свой Postgres или Railway URL.
+
+---
+
+## Деплой на Railway
+
+### Куда класть variables?
+
+| Место | Что туда |
+|-------|----------|
+| **Сервис с кодом (GitHub repo)** | `BOT_TOKEN`, `ADMIN_TELEGRAM_IDS`, `PUBLIC_URL`, `WEBAPP_URL`, каналы, `PAYMENT_CARD_INFO` |
+| **Сервис PostgreSQL** | Ничего вручную — Railway сам держит `DATABASE_URL`, `PGHOST`, … |
+| **Связка** | В **сервисе repo** → Variable `DATABASE_URL` = **Reference** → `${{Postgres.DATABASE_URL}}` |
+| **Git / файлы репо** | Секреты **не коммитить** |
+
+**Не дублируй** `DATABASE_URL` в Postgres-сервисе для приложения — только **reference из app-сервиса**.
+
+### Variables в сервисе с кодом (пример)
+
+```
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+BOT_TOKEN=...
+ADMIN_TELEGRAM_IDS=885695690
+PUBLIC_URL=https://api-xxxx.up.railway.app
+WEBAPP_URL=https://web-xxxx.up.railway.app
+CHANNEL_MAIN_ID=@vtgshmot
+CHANNEL_STOCK_ID=@nalichievtgshmot
+PAYMENT_CARD_INFO=Перевод на карту • заказ №
+```
+
+`PORT` — Railway выставит сам.
+
+### Шаги
+
+1. Project → Deploy repo + Add **PostgreSQL**
+2. Сервис **api** → Variables (таблица выше)
+3. Settings → **Generate Domain**
+4. Отдельно задеploy **web** (`apps/web`) или Vercel для Mini App
+5. BotFather → Web App URL = `WEBAPP_URL` (HTTPS)
+
+При старте api выполнится `prisma db push` (таблицы создадутся автоматически).
+
+---
 
 ## Типичный флоу
 
