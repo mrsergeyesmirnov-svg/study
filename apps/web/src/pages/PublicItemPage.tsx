@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, formatPrice, type ProductItem } from "../api";
 import { openTelegramLink } from "../telegram";
 
-const BOT_SHOP = "https://t.me/your_bot/shop";
+const BOT_SHOP = "https://t.me/vtgconcept_bot/shop";
 
 export function PublicItemPage() {
   const { code } = useParams<{ code: string }>();
