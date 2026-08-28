@@ -106,14 +106,14 @@ PAYMENT_CARD_INFO=Перевод на карту • заказ №
 
 #### Сервис `web` (Mini App)
 
+**Settings → Build → Dockerfile Path:** `Dockerfile.web`  ← **обязательно!**
+
+Variables:
 ```
-SERVICE_ROLE=web
 VITE_API_URL=https://твой-api.up.railway.app
 ```
 
-`DATABASE_URL` **не нужен** — web только отдаёт статику.
-
-`VITE_API_URL` — URL **api-сервиса** (Generate Domain у study).
+`DATABASE_URL` и `SERVICE_ROLE` **не нужны**.
 
 После добавления variables → **Redeploy оба сервиса** (web пересоберётся с API URL).
 
