@@ -85,28 +85,45 @@ npm run dev -w @vtgshmot/web
 
 **Не дублируй** `DATABASE_URL` в Postgres-сервисе для приложения — только **reference из app-сервиса**.
 
-### Variables в сервисе с кодом (пример)
+### Два сервиса на Railway
+
+Один репо, **два сервиса**, один Dockerfile. Различие — переменная `SERVICE_ROLE`.
+
+#### Сервис `study` (API + бот)
 
 ```
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 BOT_TOKEN=...
 ADMIN_TELEGRAM_IDS=885695690
-PUBLIC_URL=https://api-xxxx.up.railway.app
-WEBAPP_URL=https://web-xxxx.up.railway.app
+PUBLIC_URL=https://твой-web.up.railway.app
+WEBAPP_URL=https://твой-web.up.railway.app
 CHANNEL_MAIN_ID=@vtgshmot
 CHANNEL_STOCK_ID=@nalichievtgshmot
 PAYMENT_CARD_INFO=Перевод на карту • заказ №
 ```
 
-`PORT` — Railway выставит сам.
+`SERVICE_ROLE` **не нужен** (по умолчанию api).
+
+#### Сервис `web` (Mini App)
+
+```
+SERVICE_ROLE=web
+VITE_API_URL=https://твой-api.up.railway.app
+```
+
+`DATABASE_URL` **не нужен** — web только отдаёт статику.
+
+`VITE_API_URL` — URL **api-сервиса** (Generate Domain у study).
+
+После добавления variables → **Redeploy оба сервиса** (web пересоберётся с API URL).
 
 ### Шаги
 
 1. Project → Deploy repo + Add **PostgreSQL**
-2. Сервис **api** → Variables (таблица выше)
-3. Settings → **Generate Domain**
-4. Отдельно задеploy **web** (`apps/web`) или Vercel для Mini App
-5. BotFather → Web App URL = `WEBAPP_URL` (HTTPS)
+2. Сервис **study** (api) → Variables → Generate Domain
+3. Сервис **web** → Variables (`SERVICE_ROLE`, `VITE_API_URL`) → Generate Domain
+4. Обнови `PUBLIC_URL` / `WEBAPP_URL` в api на домен web → Redeploy api
+5. BotFather → Web App URL = домен web
 
 При старте api выполнится `prisma db push` (таблицы создадутся автоматически).
 

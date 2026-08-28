@@ -1,8 +1,7 @@
-FROM node:22-alpine AS build
+FROM node:22-alpine
 
 WORKDIR /app
 
-# Workspace manifests first (better layer cache)
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
@@ -11,8 +10,14 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build -w @vtgshmot/api
+# API URL для фронта (Railway: задай VITE_API_URL в Variables web-сервиса)
+ARG VITE_API_URL=
+ENV VITE_API_URL=$VITE_API_URL
 
-EXPOSE 3001
+RUN npm run build -w @vtgshmot/api && npm run build -w @vtgshmot/web
 
-CMD ["npm", "run", "start:railway", "-w", "@vtgshmot/api"]
+RUN chmod +x docker-entrypoint.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
