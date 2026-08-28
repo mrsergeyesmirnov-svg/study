@@ -9,7 +9,12 @@ declare global {
 function apiBase(): string {
   const fromRuntime = window.__VTG_API__?.replace(/\/$/, "");
   const fromBuild = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
-  return fromRuntime || fromBuild || "/api";
+  let base = fromRuntime || fromBuild || "/api";
+  // VITE_API_URL = https://study... → нужен .../api/admin/me, не .../admin/me
+  if (base.startsWith("http") && !base.endsWith("/api")) {
+    base = `${base}/api`;
+  }
+  return base;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
