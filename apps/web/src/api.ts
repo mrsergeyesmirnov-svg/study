@@ -1,8 +1,19 @@
 import { getInitData } from "./telegram";
 
-const API = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "") || "/api";
+declare global {
+  interface Window {
+    __VTG_API__?: string;
+  }
+}
+
+function apiBase(): string {
+  const fromRuntime = window.__VTG_API__?.replace(/\/$/, "");
+  const fromBuild = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+  return fromRuntime || fromBuild || "/api";
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const API = apiBase();
   const headers = new Headers(options.headers);
   const initData = getInitData();
   if (initData) headers.set("X-Telegram-Init-Data", initData);
