@@ -1,8 +1,21 @@
-# VTGSHMOT — study
+# VTGSHMOT Platform
 
-Исследование Telegram-магазина VTGSHMOT: канал, Mini App, план автоматизации и полного контура (каталог → заказы → оплата → финансы).
+Telegram-магазин винтажа с нуля: бот, Mini App, QR-бирки, админка, автопост в каналы.
 
-## Документы
+## Документация
 
-- [Полный анализ и план по этапам](docs/VTGSHMOT-study.md)
-- [Схема целевой архитектуры](docs/architecture.mermaid)
+- [Запуск и настройка](SETUP.md)
+- [Исследование и архитектура](docs/VTGSHMOT-study.md)
+
+## Стек
+
+- **API:** Hono + Prisma + grammY
+- **Web:** React + Vite + Telegram WebApp SDK
+- **DB:** SQLite (dev) / PostgreSQL (prod)
+
+## Структура
+
+```
+apps/api/   — backend, бот, API
+apps/web/   — Mini App + публичные страницы /i/:code
+```

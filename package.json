@@ -1,0 +1,11 @@
+{
+  "name": "vtgshmot",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev -w @vtgshmot/api & npm run dev -w @vtgshmot/web",
+    "build": "npm run build -w @vtgshmot/api && npm run build -w @vtgshmot/web",
+    "db:push": "npm run db:push -w @vtgshmot/api",
+    "db:generate": "npm run db:generate -w @vtgshmot/api"
+  }
+}
