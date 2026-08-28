@@ -4,3 +4,4 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
+# Start Command в UI должен быть ПУСТ — используется ENTRYPOINT из Dockerfile
