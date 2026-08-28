@@ -1,0 +1,36 @@
+flowchart TB
+    subgraph Admin["Админ (друг / менеджер)"]
+        FORM["Форма: фото, название, размер, состояние, цена"]
+    end
+
+    subgraph Backend["Backend + PostgreSQL"]
+        API["REST API"]
+        DB[(products · orders · payments)]
+        WORKER["Job: publish / mark sold"]
+    end
+
+    subgraph Telegram["Telegram"]
+        CH_MAIN["@vtgshmot"]
+        CH_STOCK["@nalichievtgshmot"]
+        BOT["@vtgkatalog_bot"]
+        CEO["@vtgceo уведомления"]
+    end
+
+    subgraph Client["Клиент"]
+        TMA["Mini App: каталог · корзина · оплата"]
+    end
+
+    subgraph Payment["Оплата"]
+        YK["ЮKassa / Telegram Payments"]
+    end
+
+    FORM --> API
+    API --> DB
+    API --> WORKER
+    WORKER --> CH_MAIN
+    WORKER --> CH_STOCK
+    WORKER --> BOT
+    TMA --> API
+    API --> YK
+    YK -->|webhook paid| API
+    API --> CEO
