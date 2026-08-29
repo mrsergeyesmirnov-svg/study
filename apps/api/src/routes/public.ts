@@ -1,9 +1,25 @@
 import { Hono } from "hono";
 import { prisma } from "../db.js";
-import { publicItemUrl } from "../env.js";
+import { publicItemUrl, apiPublicOrigin } from "../env.js";
 import { ProductStatus, BarcodeStatus } from "@prisma/client";
 
 export const publicRoutes = new Hono();
+
+function rewriteImageUrl(url: string): string {
+  const origin = apiPublicOrigin();
+  if (!origin) return url;
+
+  // Absolute URL pointing at /api/media/:id — force API host (not web Mini App).
+  const mediaMatch = url.match(/\/api\/media\/([a-z0-9]+)/i);
+  if (mediaMatch) return `${origin}/api/media/${mediaMatch[1]}`;
+
+  // Legacy disk uploads — still rewrite host so web domain isn't used.
+  const uploadMatch = url.match(/\/uploads\/([^/?#]+)/i);
+  if (uploadMatch) return `${origin}/uploads/${uploadMatch[1]}`;
+
+  if (url.startsWith("/")) return `${origin}${url}`;
+  return url;
+}
 
 function serializeProduct(
   product: {
@@ -33,7 +49,9 @@ function serializeProduct(
     story: product.story,
     priceRub: product.priceRub,
     status: product.status,
-    images: product.images.sort((a, b) => a.sortOrder - b.sortOrder).map((i) => i.url),
+    images: product.images
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((i) => rewriteImageUrl(i.url)),
     publicUrl: product.barcode ? publicItemUrl(product.barcode.code) : null,
     isAvailable: product.status === ProductStatus.AVAILABLE,
   };

@@ -78,6 +78,15 @@ model ProductImage {
   sortOrder Int     @default(0)
 }
 
+/// Durable image storage (Railway disk is ephemeral — keep bytes in Postgres).
+model MediaObject {
+  id        String   @id @default(cuid())
+  mimeType  String   @default("image/jpeg")
+  data      Bytes
+  size      Int
+  createdAt DateTime @default(now())
+}
+
 model Order {
   id               String      @id @default(cuid())
   telegramUserId   String

@@ -15,6 +15,7 @@ import { publicRoutes } from "./routes/public.js";
 import { adminRoutes } from "./routes/admin.js";
 import { orderRoutes } from "./routes/orders.js";
 import { uploadRoutes } from "./routes/upload.js";
+import { mediaRoutes } from "./routes/media.js";
 
 const app = new Hono();
 
@@ -31,6 +32,7 @@ app.get("/api/health", (c) => c.json({ ok: true, service: "vtgshmot-api" }));
 app.route("/api/public", publicRoutes);
 app.route("/api/orders", orderRoutes);
 app.route("/api/upload", uploadRoutes);
+app.route("/api/media", mediaRoutes);
 
 const bot = createBot();
 app.route("/api/admin", adminRoutes(bot));

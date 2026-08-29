@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { QrScanner } from "../components/QrScanner";
+import { compressImage } from "../lib/compressImage";
 
 export function AdminCreatePage() {
   const [params] = useSearchParams();
@@ -43,15 +44,24 @@ export function AdminCreatePage() {
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files?.length) return;
-    for (const file of files) {
-      const { url } = await api.uploadImage(file);
-      setImageUrls((prev) => [...prev, url]);
+    for (const file of Array.from(files)) {
+      try {
+        const compressed = await compressImage(file);
+        const { url } = await api.uploadImage(compressed);
+        setImageUrls((prev) => [...prev, url]);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Не удалось загрузить фото");
+      }
     }
+    e.target.value = "";
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!code || !title || !priceRub) return alert("Код, название и цена обязательны");
+    if (publish && imageUrls.length === 0) {
+      return alert("Для публикации в канал нужно хотя бы одно фото");
+    }
     setLoading(true);
     try {
       await api.adminCreateProduct({

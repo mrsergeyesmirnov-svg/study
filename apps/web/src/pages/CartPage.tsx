@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, formatPrice, type ProductItem } from "../api";
 import { getCart, removeFromCart, clearCart } from "../cart";
 import { openTelegramLink } from "../telegram";
+import { ProductPhoto } from "../components/ProductPhoto";
 
 export function CartPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
@@ -84,7 +85,11 @@ export function CartPage() {
         <>
           {items.map((item) => (
             <div key={item.id} className="cart-item">
-              <img src={item.images[0]} alt="" />
+              <ProductPhoto
+                src={item.images[0]}
+                alt=""
+                style={{ width: 72, height: 72, borderRadius: 8, flexShrink: 0 }}
+              />
               <div style={{ flex: 1 }}>
                 <div>{item.title}</div>
                 <div style={{ color: "var(--muted)", fontSize: "0.85rem" }}>

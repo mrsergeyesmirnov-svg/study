@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, formatPrice, type ProductItem } from "../api";
 import { openTelegramLink } from "../telegram";
+import { ProductPhoto } from "../components/ProductPhoto";
 
 const BOT_SHOP = "https://t.me/vtgconcept_bot/shop";
 
@@ -52,9 +53,11 @@ export function PublicItemPage() {
       </div>
 
       <div className="gallery">
-        {p.images.map((url) => (
-          <img key={url} src={url} alt={p.title} />
-        ))}
+        {p.images.length === 0 ? (
+          <ProductPhoto src={null} alt={p.title} style={{ width: "100%", borderRadius: 12 }} />
+        ) : (
+          p.images.map((url) => <ProductPhoto key={url} src={url} alt={p.title} />)
+        )}
       </div>
 
       <h2>{p.title}</h2>
@@ -101,7 +104,7 @@ export function PublicItemPage() {
           <div className="grid">
             {similar.map((item) => (
               <Link key={item.id} to={item.publicUrl?.replace(/^https?:\/\/[^/]+/, "") || `/product/${item.id}`} className="card">
-                <img src={item.images[0]} alt="" />
+                <ProductPhoto src={item.images[0]} alt="" />
                 <div className="card-body">
                   <div className="card-price">{formatPrice(item.priceRub)}</div>
                   <div className="card-title">{item.title}</div>

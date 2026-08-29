@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, formatPrice, type ProductItem } from "../api";
+import { ProductPhoto } from "../components/ProductPhoto";
 
 export function ShopPage() {
   const [items, setItems] = useState<ProductItem[]>([]);
@@ -60,7 +61,7 @@ export function ShopPage() {
         <div className="grid">
           {items.map((item) => (
             <Link key={item.id} to={`/product/${item.id}`} className="card">
-              <img src={item.images[0] || "/placeholder.svg"} alt={item.title} />
+              <ProductPhoto src={item.images[0]} alt={item.title} />
               <div className="card-body">
                 <div className="card-price">{formatPrice(item.priceRub)}</div>
                 <div className="card-title">{item.title}</div>

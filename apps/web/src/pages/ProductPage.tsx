@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, formatPrice, type ProductItem } from "../api";
 import { addToCart } from "../cart";
+import { ProductPhoto } from "../components/ProductPhoto";
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,9 +29,11 @@ export function ProductPage() {
         ← Назад
       </button>
       <div className="gallery">
-        {item.images.map((url) => (
-          <img key={url} src={url} alt={item.title} />
-        ))}
+        {item.images.length === 0 ? (
+          <ProductPhoto src={null} alt={item.title} style={{ width: "100%", borderRadius: 12 }} />
+        ) : (
+          item.images.map((url) => <ProductPhoto key={url} src={url} alt={item.title} />)
+        )}
       </div>
       <h2 style={{ margin: "12px 0 4px" }}>{item.title}</h2>
       <div style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 12 }}>
