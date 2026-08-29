@@ -67,6 +67,7 @@ export function PublicItemPage() {
       </div>
 
       {p.size && <p><strong>Размер:</strong> {p.size}</p>}
+      {p.categoryLabel && <p><strong>Категория:</strong> {p.categoryLabel}</p>}
       {p.conditionText && <p><strong>Состояние:</strong> {p.conditionText}</p>}
       {p.measurements && <p><strong>Замеры:</strong> {p.measurements}</p>}
       {p.story && <p style={{ lineHeight: 1.5 }}>{p.story}</p>}
