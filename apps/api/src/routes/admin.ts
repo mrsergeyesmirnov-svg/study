@@ -2,10 +2,11 @@ import { Hono } from "hono";
 import { prisma } from "../db.js";
 import { isAdmin } from "../env.js";
 import { parseInitDataUser } from "../telegram/validate.js";
-import { BarcodeStatus, ProductStatus, SoldChannel } from "@prisma/client";
+import { BarcodeStatus, ProductSource, ProductStatus, SoldChannel } from "@prisma/client";
 import type { Bot } from "grammy";
 import { publishProductToChannels, markSoldInChannels } from "../telegram/channels.js";
 import { isProductCategory } from "../catalog/categories.js";
+import { activateProduct } from "../telegram/scheduler.js";
 
 function requireAdmin(c: { req: { header: (n: string) => string | undefined } }) {
   const initData = c.req.header("X-Telegram-Init-Data") ?? "";
@@ -14,6 +15,40 @@ function requireAdmin(c: { req: { header: (n: string) => string | undefined } })
     return { error: "forbidden" as const, user: null };
   }
   return { error: null, user };
+}
+
+function serializeAdminProduct(p: {
+  id: string;
+  title: string;
+  priceRub: number;
+  status: ProductStatus;
+  source: ProductSource;
+  size: string | null;
+  brand: string | null;
+  conditionText: string | null;
+  measurements: string | null;
+  story: string | null;
+  publishAt: Date | null;
+  createdAt: Date;
+  images: { url: string; sortOrder: number }[];
+  barcode: { code: string } | null;
+}) {
+  return {
+    id: p.id,
+    title: p.title,
+    priceRub: p.priceRub,
+    status: p.status,
+    source: p.source,
+    size: p.size,
+    brand: p.brand,
+    conditionText: p.conditionText,
+    measurements: p.measurements,
+    story: p.story,
+    publishAt: p.publishAt?.toISOString() ?? null,
+    createdAt: p.createdAt.toISOString(),
+    images: p.images.sort((a, b) => a.sortOrder - b.sortOrder).map((i) => i.url),
+    code: p.barcode?.code ?? null,
+  };
 }
 
 export function adminRoutes(bot: Bot) {
@@ -121,6 +156,43 @@ export function adminRoutes(bot: Bot) {
     return c.json({ items: barcodes });
   });
 
+  /** Inbox: channel posts waiting for barcode scan → catalog. */
+  app.get("/inbox", async (c) => {
+    const auth = requireAdmin(c);
+    if (auth.error) return c.json({ error: auth.error }, 403);
+
+    const items = await prisma.product.findMany({
+      where: {
+        status: ProductStatus.DRAFT,
+        source: ProductSource.CHANNEL_IMPORT,
+        barcode: null,
+      },
+      include: { images: true, barcode: true },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    return c.json({ items: items.map(serializeAdminProduct) });
+  });
+
+  /** Scheduled drafts (have publishAt + usually barcode). */
+  app.get("/scheduled", async (c) => {
+    const auth = requireAdmin(c);
+    if (auth.error) return c.json({ error: auth.error }, 403);
+
+    const items = await prisma.product.findMany({
+      where: {
+        status: ProductStatus.DRAFT,
+        publishAt: { not: null },
+      },
+      include: { images: true, barcode: true },
+      orderBy: { publishAt: "asc" },
+      take: 50,
+    });
+
+    return c.json({ items: items.map(serializeAdminProduct) });
+  });
+
   app.post("/products", async (c) => {
     const auth = requireAdmin(c);
     if (auth.error) return c.json({ error: auth.error }, 403);
@@ -139,6 +211,7 @@ export function adminRoutes(bot: Bot) {
       costRub?: number;
       imageUrls?: string[];
       publish?: boolean;
+      publishAt?: string | null;
     }>();
 
     const code = body.code.toUpperCase();
@@ -155,6 +228,10 @@ export function adminRoutes(bot: Bot) {
       return c.json({ error: "invalid_category" }, 400);
     }
 
+    const publishAt = body.publishAt ? new Date(body.publishAt) : null;
+    const scheduleLater = !!(publishAt && publishAt.getTime() > Date.now());
+    const publishNow = !!body.publish && !scheduleLater;
+
     const product = await prisma.$transaction(async (tx) => {
       const p = await tx.product.create({
         data: {
@@ -168,7 +245,9 @@ export function adminRoutes(bot: Bot) {
           story: body.story,
           description: body.description,
           costRub: body.costRub,
-          status: body.publish ? ProductStatus.AVAILABLE : ProductStatus.DRAFT,
+          status: publishNow ? ProductStatus.AVAILABLE : ProductStatus.DRAFT,
+          source: ProductSource.ADMIN,
+          publishAt: scheduleLater ? publishAt : null,
           images: {
             create: (body.imageUrls ?? []).map((url, i) => ({
               url,
@@ -192,7 +271,7 @@ export function adminRoutes(bot: Bot) {
     });
 
     let channelIds: { mainId?: string; stockId?: string } = {};
-    if (body.publish && product.images.length > 0) {
+    if (publishNow && product.images.length > 0) {
       channelIds = await publishProductToChannels(bot, product, code);
       await prisma.product.update({
         where: { id: product.id },
@@ -203,7 +282,112 @@ export function adminRoutes(bot: Bot) {
       });
     }
 
-    return c.json({ product, code, published: !!body.publish, channelIds });
+    return c.json({
+      product,
+      code,
+      published: publishNow,
+      scheduled: !!scheduleLater,
+      publishAt: scheduleLater ? publishAt!.toISOString() : null,
+      channelIds,
+    });
+  });
+
+  /** Link free barcode to inbox draft → appear in catalog. */
+  app.post("/products/:id/link-barcode", async (c) => {
+    const auth = requireAdmin(c);
+    if (auth.error) return c.json({ error: auth.error }, 403);
+
+    const productId = c.req.param("id");
+    const body = await c.req.json<{ code: string; activate?: boolean }>();
+    const code = body.code.toUpperCase();
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { barcode: true, images: true },
+    });
+    if (!product) return c.json({ error: "not_found" }, 404);
+    if (product.barcode) return c.json({ error: "already_has_barcode" }, 400);
+    if (product.status === ProductStatus.SOLD) return c.json({ error: "sold" }, 400);
+
+    const barcode = await prisma.barcode.findUnique({ where: { code } });
+    if (!barcode) return c.json({ error: "barcode_not_found" }, 404);
+    if (barcode.status !== BarcodeStatus.POOL || barcode.productId) {
+      return c.json({ error: "barcode_not_free" }, 400);
+    }
+
+    await prisma.barcode.update({
+      where: { code },
+      data: {
+        productId: product.id,
+        status: BarcodeStatus.ASSIGNED,
+        assignedAt: new Date(),
+      },
+    });
+
+    const activate = body.activate !== false;
+    if (activate) {
+      const result = await activateProduct(bot, product.id);
+      if (!result.ok) return c.json({ error: result.error }, 400);
+      return c.json({ ok: true, code, activated: true });
+    }
+
+    return c.json({ ok: true, code, activated: false });
+  });
+
+  app.patch("/products/:id/schedule", async (c) => {
+    const auth = requireAdmin(c);
+    if (auth.error) return c.json({ error: auth.error }, 403);
+
+    const productId = c.req.param("id");
+    const body = await c.req.json<{ publishAt: string | null }>();
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { barcode: true },
+    });
+    if (!product) return c.json({ error: "not_found" }, 404);
+    if (!product.barcode) return c.json({ error: "no_barcode" }, 400);
+    if (product.status === ProductStatus.SOLD) return c.json({ error: "sold" }, 400);
+
+    const publishAt = body.publishAt ? new Date(body.publishAt) : null;
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        publishAt,
+        status: ProductStatus.DRAFT,
+      },
+      include: { images: true, barcode: true },
+    });
+
+    return c.json({ product: serializeAdminProduct(updated) });
+  });
+
+  app.post("/products/:id/activate", async (c) => {
+    const auth = requireAdmin(c);
+    if (auth.error) return c.json({ error: auth.error }, 403);
+
+    const productId = c.req.param("id");
+    const body = await c.req.json<{ postToChannels?: boolean }>().catch(() => ({}));
+    const result = await activateProduct(bot, productId, body);
+    if (!result.ok) return c.json({ error: result.error }, 400);
+    return c.json(result);
+  });
+
+  app.post("/products/:id/dismiss", async (c) => {
+    const auth = requireAdmin(c);
+    if (auth.error) return c.json({ error: auth.error }, 403);
+
+    const productId = c.req.param("id");
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return c.json({ error: "not_found" }, 404);
+    if (product.status !== ProductStatus.DRAFT) {
+      return c.json({ error: "not_draft" }, 400);
+    }
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: { status: ProductStatus.ARCHIVED, publishAt: null },
+    });
+    return c.json({ ok: true });
   });
 
   app.post("/products/:id/sold", async (c) => {
@@ -286,12 +470,14 @@ export function adminRoutes(bot: Bot) {
     const auth = requireAdmin(c);
     if (auth.error) return c.json({ error: auth.error }, 403);
 
+    const status = c.req.query("status");
     const products = await prisma.product.findMany({
+      where: status ? { status: status as ProductStatus } : undefined,
       include: { images: true, barcode: true },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
-    return c.json({ items: products });
+    return c.json({ items: products.map(serializeAdminProduct) });
   });
 
   app.get("/orders", async (c) => {

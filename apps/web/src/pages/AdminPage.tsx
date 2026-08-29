@@ -146,7 +146,13 @@ export function AdminPage() {
         </p>
       </section>
 
-      <section>
+      <section style={{ marginBottom: 24 }}>
+        <Link to="/admin/inbox" className="btn-secondary" style={{ display: "block", textAlign: "center", textDecoration: "none", marginBottom: 8 }}>
+          📥 Входящие из канала
+        </Link>
+        <Link to="/admin/scheduled" className="btn-secondary" style={{ display: "block", textAlign: "center", textDecoration: "none", marginBottom: 8 }}>
+          📅 Планировщик постов
+        </Link>
         <Link to="/admin/create" className="btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
           + Новый товар
         </Link>

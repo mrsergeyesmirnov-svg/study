@@ -99,6 +99,7 @@ publicRoutes.get("/catalog", async (c) => {
   const products = await prisma.product.findMany({
     where: {
       status: ProductStatus.AVAILABLE,
+      barcode: { isNot: null },
       ...(size ? { size } : {}),
       ...(category && isProductCategory(category) ? { category } : {}),
       ...(q
