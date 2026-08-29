@@ -41,6 +41,7 @@ async function handleChannelPost(bot: Bot, ctx: Context, isEdit = false): Promis
 
   const chatId = String(ctx.chat.id);
   const messageId = String(msg.message_id);
+  const sourceKey = `${chatId}:${messageId}`;
   const mediaGroupId = msg.media_group_id ?? null;
 
   // Media-group follow-up: only photo, no caption — append image to existing draft.
@@ -57,9 +58,7 @@ async function handleChannelPost(bot: Bot, ctx: Context, isEdit = false): Promis
   const imageUrl = fileId ? await downloadTelegramFile(bot, fileId) : null;
 
   const existing = await prisma.product.findUnique({
-    where: {
-      sourceChatId_sourceMessageId: { sourceChatId: chatId, sourceMessageId: messageId },
-    },
+    where: { sourceKey },
     include: { images: true, barcode: true },
   });
 
@@ -118,6 +117,7 @@ async function handleChannelPost(bot: Bot, ctx: Context, isEdit = false): Promis
       source: ProductSource.CHANNEL_IMPORT,
       sourceChatId: chatId,
       sourceMessageId: messageId,
+      sourceKey,
       sourceMediaGroupId: mediaGroupId,
       channelMainId: messageId,
       images: imageUrl
@@ -126,7 +126,7 @@ async function handleChannelPost(bot: Bot, ctx: Context, isEdit = false): Promis
     },
   });
 
-  console.log(`Channel import draft: "${parsed.title}" (${chatId}/${messageId})`);
+  console.log(`Channel import draft: "${parsed.title}" (${sourceKey})`);
 }
 
 async function appendMediaGroupPhoto(

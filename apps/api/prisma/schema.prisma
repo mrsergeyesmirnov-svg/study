@@ -76,6 +76,8 @@ model Product {
   sourceChatId       String?
   sourceMessageId    String?
   sourceMediaGroupId String?
+  /// Dedup key `${chatId}:${messageId}` for channel imports (avoids nullable composite unique).
+  sourceKey          String?        @unique
   barcode            Barcode?
   images             ProductImage[]
   orderItems         OrderItem[]
@@ -83,7 +85,6 @@ model Product {
   updatedAt          DateTime       @updatedAt
   soldAt             DateTime?
 
-  @@unique([sourceChatId, sourceMessageId])
   @@index([status, publishAt])
   @@index([source, status])
   @@index([status, category])

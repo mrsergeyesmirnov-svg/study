@@ -1,11 +1,8 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
 import type { Bot } from "grammy";
-import { env } from "../env.js";
+import { env, apiPublicOrigin } from "../env.js";
+import { prisma } from "../db.js";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-
+/** Download a Telegram file and store bytes in Postgres (survives Railway redeploys). */
 export async function downloadTelegramFile(
   bot: Bot,
   fileId: string,
@@ -18,18 +15,20 @@ export async function downloadTelegramFile(
     const res = await fetch(url);
     if (!res.ok) return null;
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
-    const ext = path.extname(file.file_path) || ".jpg";
-    const filename = `${randomUUID()}${ext}`;
     const buffer = Buffer.from(await res.arrayBuffer());
-    await writeFile(path.join(UPLOAD_DIR, filename), buffer);
+    if (!buffer.byteLength) return null;
 
-    const base = (env.API_PUBLIC_URL || env.PUBLIC_URL).replace(/\/$/, "");
-    // Prefer API host for uploads when set; else PUBLIC_URL may be web — still works if proxied.
-    const uploadHost = env.API_PUBLIC_URL
-      ? env.API_PUBLIC_URL.replace(/\/$/, "")
-      : base;
-    return `${uploadHost}/uploads/${filename}`;
+    const mimeType = guessMime(file.file_path) || "image/jpeg";
+    const media = await prisma.mediaObject.create({
+      data: {
+        mimeType,
+        data: buffer,
+        size: buffer.byteLength,
+      },
+    });
+
+    const base = apiPublicOrigin() || env.PUBLIC_URL.replace(/\/$/, "");
+    return `${base}/api/media/${media.id}`;
   } catch (e) {
     console.warn("downloadTelegramFile failed:", e);
     return null;
@@ -44,4 +43,13 @@ export function largestPhotoFileId(
     a.width * a.height >= b.width * b.height ? a : b,
   );
   return best.file_id;
+}
+
+function guessMime(path: string): string | null {
+  const lower = path.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return null;
 }

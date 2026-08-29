@@ -10,4 +10,5 @@ if [ "$RAILWAY_SERVICE_NAME" = "web" ]; then
 fi
 
 echo "Starting API + Telegram bot on port ${PORT:-3001}"
+echo "Prisma db push (accept-data-loss) then node..."
 exec npm run start:railway -w @vtgshmot/api
