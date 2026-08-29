@@ -40,6 +40,7 @@ export function ProductPage() {
         {formatPrice(item.priceRub)}
       </div>
       {item.size && <p>Размер: {item.size}</p>}
+      {item.categoryLabel && <p>Категория: {item.categoryLabel}</p>}
       {item.conditionText && <p>Сост.: {item.conditionText}</p>}
       {item.measurements && <p>Замеры: {item.measurements}</p>}
       {item.story && <p>{item.story}</p>}

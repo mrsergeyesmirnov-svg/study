@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { prisma } from "../db.js";
 import { publicItemUrl, apiPublicOrigin } from "../env.js";
-import { ProductStatus, BarcodeStatus } from "@prisma/client";
+import { ProductStatus } from "@prisma/client";
+import { PRODUCT_CATEGORIES, categoryLabel, isProductCategory } from "../catalog/categories.js";
 
 export const publicRoutes = new Hono();
 
@@ -9,11 +10,9 @@ function rewriteImageUrl(url: string): string {
   const origin = apiPublicOrigin();
   if (!origin) return url;
 
-  // Absolute URL pointing at /api/media/:id — force API host (not web Mini App).
   const mediaMatch = url.match(/\/api\/media\/([a-z0-9]+)/i);
   if (mediaMatch) return `${origin}/api/media/${mediaMatch[1]}`;
 
-  // Legacy disk uploads — still rewrite host so web domain isn't used.
   const uploadMatch = url.match(/\/uploads\/([^/?#]+)/i);
   if (uploadMatch) return `${origin}/uploads/${uploadMatch[1]}`;
 
@@ -27,6 +26,7 @@ function serializeProduct(
     title: string;
     description: string | null;
     brand: string | null;
+    category: string | null;
     size: string | null;
     conditionText: string | null;
     measurements: string | null;
@@ -43,6 +43,8 @@ function serializeProduct(
     title: product.title,
     description: product.description,
     brand: product.brand,
+    category: product.category,
+    categoryLabel: categoryLabel(product.category),
     size: product.size,
     conditionText: product.conditionText,
     measurements: product.measurements,
@@ -91,17 +93,19 @@ publicRoutes.get("/item/:code", async (c) => {
 
 publicRoutes.get("/catalog", async (c) => {
   const size = c.req.query("size");
+  const category = c.req.query("category");
   const q = c.req.query("q");
 
   const products = await prisma.product.findMany({
     where: {
       status: ProductStatus.AVAILABLE,
       ...(size ? { size } : {}),
+      ...(category && isProductCategory(category) ? { category } : {}),
       ...(q
         ? {
             OR: [
-              { title: { contains: q } },
-              { brand: { contains: q } },
+              { title: { contains: q, mode: "insensitive" } },
+              { brand: { contains: q, mode: "insensitive" } },
             ],
           }
         : {}),
@@ -116,12 +120,37 @@ publicRoutes.get("/catalog", async (c) => {
 });
 
 publicRoutes.get("/sizes", async (c) => {
+  const category = c.req.query("category");
   const rows = await prisma.product.findMany({
-    where: { status: ProductStatus.AVAILABLE, size: { not: null } },
+    where: {
+      status: ProductStatus.AVAILABLE,
+      size: { not: null },
+      ...(category && isProductCategory(category) ? { category } : {}),
+    },
     select: { size: true },
     distinct: ["size"],
   });
   return c.json({ sizes: rows.map((r) => r.size).filter(Boolean) });
+});
+
+publicRoutes.get("/categories", async (c) => {
+  const usedOnly = c.req.query("used") === "1";
+  const counts = await prisma.product.groupBy({
+    by: ["category"],
+    where: { status: ProductStatus.AVAILABLE, category: { not: null } },
+    _count: { _all: true },
+  });
+  const countMap = new Map(counts.map((r) => [r.category!, r._count._all]));
+
+  const items = PRODUCT_CATEGORIES.filter((cat) => !usedOnly || (countMap.get(cat.id) ?? 0) > 0).map(
+    (cat) => ({
+      id: cat.id,
+      label: cat.label,
+      count: countMap.get(cat.id) ?? 0,
+    }),
+  );
+
+  return c.json({ items });
 });
 
 publicRoutes.get("/similar/:productId", async (c) => {
@@ -134,6 +163,7 @@ publicRoutes.get("/similar/:productId", async (c) => {
       status: ProductStatus.AVAILABLE,
       id: { not: productId },
       OR: [
+        product.category ? { category: product.category } : {},
         product.brand ? { brand: product.brand } : {},
         product.size ? { size: product.size } : {},
       ],

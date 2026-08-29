@@ -51,6 +51,8 @@ model Product {
   title           String
   description     String?
   brand           String?
+  /// Catalog filter: outerwear | polo | pants | accessories | …
+  category        String?
   size            String?
   conditionText   String?
   measurements    String?
@@ -68,6 +70,8 @@ model Product {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   soldAt          DateTime?
+
+  @@index([status, category])
 }
 
 model ProductImage {

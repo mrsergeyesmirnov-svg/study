@@ -40,6 +40,8 @@ export interface ProductItem {
   title: string;
   description: string | null;
   brand: string | null;
+  category: string | null;
+  categoryLabel: string | null;
   size: string | null;
   conditionText: string | null;
   measurements: string | null;
@@ -52,13 +54,24 @@ export interface ProductItem {
 }
 
 export const api = {
-  catalog: (params?: { size?: string; q?: string }) => {
+  catalog: (params?: { size?: string; category?: string; q?: string }) => {
     const q = new URLSearchParams();
     if (params?.size) q.set("size", params.size);
+    if (params?.category) q.set("category", params.category);
     if (params?.q) q.set("q", params.q);
     return request<{ items: ProductItem[] }>(`/public/catalog?${q}`);
   },
-  sizes: () => request<{ sizes: string[] }>("/public/sizes"),
+  sizes: (category?: string) => {
+    const q = new URLSearchParams();
+    if (category) q.set("category", category);
+    return request<{ sizes: string[] }>(`/public/sizes?${q}`);
+  },
+  categories: (usedOnly = false) => {
+    const q = usedOnly ? "?used=1" : "";
+    return request<{ items: { id: string; label: string; count: number }[] }>(
+      `/public/categories${q}`,
+    );
+  },
   item: (code: string) =>
     request<{ code: string; status: string; product: ProductItem | null; message?: string }>(
       `/public/item/${code}`,

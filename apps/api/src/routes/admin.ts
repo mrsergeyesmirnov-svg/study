@@ -5,6 +5,7 @@ import { parseInitDataUser } from "../telegram/validate.js";
 import { BarcodeStatus, ProductStatus, SoldChannel } from "@prisma/client";
 import type { Bot } from "grammy";
 import { publishProductToChannels, markSoldInChannels } from "../telegram/channels.js";
+import { isProductCategory } from "../catalog/categories.js";
 
 function requireAdmin(c: { req: { header: (n: string) => string | undefined } }) {
   const initData = c.req.header("X-Telegram-Init-Data") ?? "";
@@ -129,6 +130,7 @@ export function adminRoutes(bot: Bot) {
       title: string;
       priceRub: number;
       brand?: string;
+      category?: string;
       size?: string;
       conditionText?: string;
       measurements?: string;
@@ -149,12 +151,17 @@ export function adminRoutes(bot: Bot) {
       return c.json({ error: "barcode_already_assigned" }, 400);
     }
 
+    if (body.category && !isProductCategory(body.category)) {
+      return c.json({ error: "invalid_category" }, 400);
+    }
+
     const product = await prisma.$transaction(async (tx) => {
       const p = await tx.product.create({
         data: {
           title: body.title,
           priceRub: body.priceRub,
           brand: body.brand,
+          category: body.category || null,
           size: body.size,
           conditionText: body.conditionText,
           measurements: body.measurements,

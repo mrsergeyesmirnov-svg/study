@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { QrScanner } from "../components/QrScanner";
 import { compressImage } from "../lib/compressImage";
+import { PRODUCT_CATEGORIES } from "../lib/categories";
 
 export function AdminCreatePage() {
   const [params] = useSearchParams();
@@ -12,6 +13,7 @@ export function AdminCreatePage() {
   const [showCamera, setShowCamera] = useState(false);
   const [title, setTitle] = useState("");
   const [priceRub, setPriceRub] = useState("");
+  const [category, setCategory] = useState("");
   const [size, setSize] = useState("");
   const [conditionText, setConditionText] = useState("отличное");
   const [brand, setBrand] = useState("");
@@ -59,6 +61,7 @@ export function AdminCreatePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!code || !title || !priceRub) return alert("Код, название и цена обязательны");
+    if (!category) return alert("Выберите категорию");
     if (publish && imageUrls.length === 0) {
       return alert("Для публикации в канал нужно хотя бы одно фото");
     }
@@ -68,6 +71,7 @@ export function AdminCreatePage() {
         code,
         title,
         priceRub: parseInt(priceRub, 10),
+        category,
         size: size || undefined,
         conditionText,
         brand: brand || undefined,
@@ -125,6 +129,17 @@ export function AdminCreatePage() {
         <div className="field">
           <label>Название *</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label>Категория *</label>
+          <select value={category} onChange={(e) => setCategory(e.target.value)} required>
+            <option value="">Выберите…</option>
+            {PRODUCT_CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="field">
           <label>Цена ₽ *</label>
