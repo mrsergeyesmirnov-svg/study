@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { env } from "./env.js";
 import { createBot, setupBotMenu } from "./telegram/bot.js";
+import { startPublishScheduler } from "./telegram/scheduler.js";
 import { publicRoutes } from "./routes/public.js";
 import { adminRoutes } from "./routes/admin.js";
 import { orderRoutes } from "./routes/orders.js";
@@ -55,6 +56,7 @@ if (env.BOT_TOKEN.includes("REPLACE") || env.BOT_TOKEN.includes("TEST_TOKEN")) {
         } catch (e) {
           console.warn("Menu button setup skipped:", e);
         }
+        startPublishScheduler(bot);
       },
     })
     .catch((e) => console.error("Bot failed to start:", e.message));

@@ -1,5 +1,6 @@
 import { Bot } from "grammy";
 import { env, publicItemUrl } from "../env.js";
+import { registerChannelImport } from "./channelImport.js";
 
 export function createBot(): Bot {
   const bot = new Bot(env.BOT_TOKEN);
@@ -38,6 +39,8 @@ export function createBot(): Bot {
     }
     await ctx.reply(`Карточка вещи:\n${publicItemUrl(code)}`);
   });
+
+  registerChannelImport(bot);
 
   return bot;
 }

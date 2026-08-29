@@ -34,6 +34,11 @@ enum SoldChannel {
   OFFLINE
 }
 
+enum ProductSource {
+  ADMIN
+  CHANNEL_IMPORT
+}
+
 model Barcode {
   id         String        @id @default(cuid())
   code       String        @unique
@@ -47,27 +52,38 @@ model Barcode {
 }
 
 model Product {
-  id              String         @id @default(cuid())
-  title           String
-  description     String?
-  brand           String?
-  size            String?
-  conditionText   String?
-  measurements    String?
-  story           String?
-  priceRub        Int
-  costRub         Int?
-  status          ProductStatus  @default(DRAFT)
-  soldChannel     SoldChannel?
-  reservedUntil   DateTime?
-  channelMainId   String?
-  channelStockId  String?
-  barcode         Barcode?
-  images          ProductImage[]
-  orderItems      OrderItem[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  soldAt          DateTime?
+  id                 String         @id @default(cuid())
+  title              String
+  description        String?
+  brand              String?
+  size               String?
+  conditionText      String?
+  measurements       String?
+  story              String?
+  priceRub           Int
+  costRub            Int?
+  status             ProductStatus  @default(DRAFT)
+  source             ProductSource  @default(ADMIN)
+  soldChannel        SoldChannel?
+  reservedUntil      DateTime?
+  /// When set and status=DRAFT, scheduler publishes at this time (needs barcode + photos).
+  publishAt          DateTime?
+  channelMainId      String?
+  channelStockId     String?
+  /// Telegram channel that sourced this draft (CHANNEL_IMPORT).
+  sourceChatId       String?
+  sourceMessageId    String?
+  sourceMediaGroupId String?
+  barcode            Barcode?
+  images             ProductImage[]
+  orderItems         OrderItem[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  soldAt             DateTime?
+
+  @@unique([sourceChatId, sourceMessageId])
+  @@index([status, publishAt])
+  @@index([source, status])
 }
 
 model ProductImage {

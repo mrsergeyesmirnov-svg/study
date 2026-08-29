@@ -15,6 +15,8 @@ const envSchema = z.object({
   ADMIN_TELEGRAM_IDS: z.string().default(""),
   CHANNEL_MAIN_ID: z.string().optional(),
   CHANNEL_STOCK_ID: z.string().optional(),
+  /** Channel to watch for manual posts → inbox drafts. Defaults to CHANNEL_MAIN_ID. */
+  CHANNEL_IMPORT_ID: z.string().optional(),
   PAYMENT_CARD_INFO: z.string().default("Свяжитесь с @vtgceo для оплаты"),
   API_PUBLIC_URL: z.string().url().optional(),
   PORT: z.coerce.number().default(3001),

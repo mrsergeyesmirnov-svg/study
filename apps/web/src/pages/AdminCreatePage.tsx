@@ -3,6 +3,11 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { QrScanner } from "../components/QrScanner";
 
+function toLocalInputValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function AdminCreatePage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -17,7 +22,12 @@ export function AdminCreatePage() {
   const [measurements, setMeasurements] = useState("");
   const [story, setStory] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [publish, setPublish] = useState(true);
+  const [mode, setMode] = useState<"now" | "draft" | "schedule">("now");
+  const [publishAt, setPublishAt] = useState(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    return toLocalInputValue(d);
+  });
   const [loading, setLoading] = useState(false);
 
   async function onScanCode(scanned: string) {
@@ -52,9 +62,10 @@ export function AdminCreatePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!code || !title || !priceRub) return alert("Код, название и цена обязательны");
+    if (mode === "schedule" && !publishAt) return alert("Укажите дату публикации");
     setLoading(true);
     try {
-      await api.adminCreateProduct({
+      const res = await api.adminCreateProduct({
         code,
         title,
         priceRub: parseInt(priceRub, 10),
@@ -64,10 +75,19 @@ export function AdminCreatePage() {
         measurements: measurements || undefined,
         story: story || undefined,
         imageUrls,
-        publish,
+        publish: mode === "now",
+        publishAt: mode === "schedule" ? new Date(publishAt).toISOString() : null,
       });
-      alert(publish ? "Товар опубликован!" : "Товар сохранён");
-      navigate("/admin");
+      if (mode === "schedule" || (res as { scheduled?: boolean }).scheduled) {
+        alert("Запланировано — смотрите «Планировщик»");
+        navigate("/admin/scheduled");
+      } else if (mode === "now") {
+        alert("Товар опубликован!");
+        navigate("/admin");
+      } else {
+        alert("Черновик сохранён");
+        navigate("/admin");
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -149,12 +169,35 @@ export function AdminCreatePage() {
             ))}
           </div>
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <input type="checkbox" checked={publish} onChange={(e) => setPublish(e.target.checked)} />
-          Опубликовать в каналы сразу
-        </label>
+
+        <div className="field">
+          <label>Публикация</label>
+          <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+            <option value="now">Сразу в канал + каталог</option>
+            <option value="schedule">Отложить на время</option>
+            <option value="draft">Только черновик</option>
+          </select>
+        </div>
+        {mode === "schedule" && (
+          <div className="field">
+            <label>Дата и время публикации *</label>
+            <input
+              type="datetime-local"
+              value={publishAt}
+              onChange={(e) => setPublishAt(e.target.value)}
+              required
+            />
+          </div>
+        )}
+
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "Сохранение..." : "Сохранить"}
+          {loading
+            ? "Сохранение..."
+            : mode === "schedule"
+              ? "Запланировать"
+              : mode === "draft"
+                ? "Сохранить черновик"
+                : "Сохранить"}
         </button>
       </form>
       <Link to="/admin" style={{ display: "block", textAlign: "center", marginTop: 16 }}>

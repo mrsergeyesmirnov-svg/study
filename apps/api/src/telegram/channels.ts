@@ -31,12 +31,15 @@ export async function publishProductToChannels(
   bot: Bot,
   product: ProductWithImages,
   code: string,
+  opts: { main?: boolean; stock?: boolean } = {},
 ): Promise<{ mainId?: string; stockId?: string }> {
+  const postMain = opts.main !== false;
+  const postStock = opts.stock !== false;
   const caption = formatPost(product, code);
   const photo = product.images[0]?.url;
   const result: { mainId?: string; stockId?: string } = {};
 
-  if (env.CHANNEL_MAIN_ID && photo) {
+  if (postMain && env.CHANNEL_MAIN_ID && photo) {
     const msg = await bot.api.sendPhoto(env.CHANNEL_MAIN_ID, photo, {
       caption,
       parse_mode: "HTML",
@@ -44,7 +47,7 @@ export async function publishProductToChannels(
     result.mainId = String(msg.message_id);
   }
 
-  if (env.CHANNEL_STOCK_ID && photo) {
+  if (postStock && env.CHANNEL_STOCK_ID && photo) {
     const msg = await bot.api.sendPhoto(env.CHANNEL_STOCK_ID, photo, {
       caption,
       parse_mode: "HTML",
@@ -53,6 +56,24 @@ export async function publishProductToChannels(
   }
 
   return result;
+}
+
+/** After linking a barcode to a channel-imported post, patch caption with order link. */
+export async function patchChannelCaptionWithLink(
+  bot: Bot,
+  product: ProductWithImages,
+  code: string,
+): Promise<void> {
+  if (!env.CHANNEL_MAIN_ID || !product.channelMainId) return;
+  const caption = formatPost(product, code);
+  try {
+    await bot.api.editMessageCaption(env.CHANNEL_MAIN_ID, Number(product.channelMainId), {
+      caption,
+      parse_mode: "HTML",
+    });
+  } catch {
+    /* caption may be too long or message without photo */
+  }
 }
 
 export async function markSoldInChannels(

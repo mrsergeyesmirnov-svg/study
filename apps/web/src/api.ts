@@ -90,12 +90,50 @@ export const api = {
     }),
   adminMarkSold: (code: string) =>
     request<{ ok: boolean }>(`/admin/scan/${code}/sold`, { method: "POST" }),
+  adminInbox: () =>
+    request<{ items: AdminProduct[] }>("/admin/inbox"),
+  adminScheduled: () =>
+    request<{ items: AdminProduct[] }>("/admin/scheduled"),
+  adminLinkBarcode: (productId: string, code: string, activate = true) =>
+    request<{ ok: boolean; code: string; activated: boolean }>(
+      `/admin/products/${productId}/link-barcode`,
+      { method: "POST", body: JSON.stringify({ code, activate }) },
+    ),
+  adminScheduleProduct: (productId: string, publishAt: string | null) =>
+    request<{ product: AdminProduct }>(`/admin/products/${productId}/schedule`, {
+      method: "PATCH",
+      body: JSON.stringify({ publishAt }),
+    }),
+  adminActivateProduct: (productId: string) =>
+    request<{ ok: boolean; code?: string }>(`/admin/products/${productId}/activate`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  adminDismissProduct: (productId: string) =>
+    request<{ ok: boolean }>(`/admin/products/${productId}/dismiss`, { method: "POST" }),
   uploadImage: (file: File) => {
     const fd = new FormData();
     fd.append("file", file);
     return request<{ url: string }>("/upload", { method: "POST", body: fd });
   },
 };
+
+export interface AdminProduct {
+  id: string;
+  title: string;
+  priceRub: number;
+  status: string;
+  source: string;
+  size: string | null;
+  brand: string | null;
+  conditionText: string | null;
+  measurements: string | null;
+  story: string | null;
+  publishAt: string | null;
+  createdAt: string;
+  images: string[];
+  code: string | null;
+}
 
 export function formatPrice(n: number) {
   return `${n.toLocaleString("ru-RU")} ₽`;

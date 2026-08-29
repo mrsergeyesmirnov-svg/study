@@ -5,6 +5,8 @@ import { ProductPage } from "./pages/ProductPage";
 import { PublicItemPage } from "./pages/PublicItemPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AdminCreatePage } from "./pages/AdminCreatePage";
+import { AdminInboxPage } from "./pages/AdminInboxPage";
+import { AdminScheduledPage } from "./pages/AdminScheduledPage";
 
 function ShopLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -49,6 +51,8 @@ export default function App() {
       <Route path="/i/:code" element={<PublicItemPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/admin/create" element={<AdminCreatePage />} />
+      <Route path="/admin/inbox" element={<AdminInboxPage />} />
+      <Route path="/admin/scheduled" element={<AdminScheduledPage />} />
     </Routes>
   );
 }
